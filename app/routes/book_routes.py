@@ -1,7 +1,7 @@
 from flask import Blueprint, abort, make_response, request
 from app.models.book import Book
 from ..db import db
-# from app.models.book import books
+
 
 books_bp = Blueprint("books_bp", __name__, url_prefix="/books")
 
@@ -23,42 +23,48 @@ def create_book():
     return response, 201
 
 
-# @books_bp.get("")
-# def get_all_books():
-#     books_response = []
-#     for book in books:
-#         books_response.append(
-#             {
-#                 "id": book.id,
-#                 "title": book.title,
-#                 "description": book.description
-#             }
-#         )
-#     return books_response
+@books_bp.get("")
+def get_all_books():
+    query = db.select(Book).order_by(Book.id)
+    books = db.session.scalars(query)
+    # We could also write the line above as:
+    # books = db.session.execute(query).scalars()
 
-# @books_bp.get("/<book_id>")
-# def get_one_book(book_id):
-    
-#     book = validate_book(book_id)
-
-#     return {
-#         "id": book.id,
-#         "title": book.title,
-#         "description": book.description,
-#         }
+    books_response = []
+    for book in books:
+        books_response.append(
+            {
+                "id": book.id,
+                "title": book.title,
+                "description": book.description
+            }
+        )
+    return books_response
 
 
-# def validate_book(book_id):
-#     try:
-#         book_id = int(book_id)
-#     except:
-#         response = {"message": f"book {book_id} invalid"}
-#         abort(make_response(response, 400))
+@books_bp.get("/<book_id>")
+def get_one_book(book_id):
+    book = validate_book(book_id)
 
-#     for book in books:
-#         if book.id == book_id:
-#             return book
+    return {
+        "id": book.id,
+        "title": book.title,
+        "description": book.description
+    }
 
-#     response = {"message": f"book {book_id} not found"}
-#     abort(make_response(response, 404))
-    
+
+def validate_book(book_id):
+    try:
+        book_id = int(book_id)
+    except:
+        response = {"message": f"book {book_id} invalid"}
+        abort(make_response(response, 400))
+
+    query = db.select(Book).where(Book.id == book_id)
+    book = db.session.scalar(query)
+
+    if not book:
+        response = {"message": f"book {book_id} not found"}
+        abort(make_response(response, 404))
+
+    return book
